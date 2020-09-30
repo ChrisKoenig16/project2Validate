@@ -1,6 +1,11 @@
 package cmsc433;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+
 import cmsc433.SimulationEvent;
 
 /**
@@ -23,21 +28,80 @@ public class Validate {
 			throw new Validate.InvalidSimulationException();
 		}
 	}
-	
+
 
 	/*
-	 * In P2 you will write validation code for things such as:
-	 * Should not have more eaters than specified
-	 * Should not have more cooks than specified
-	 * The Ratsie's capacity should not be exceeded
+	 * this method checks that these conditions are true ->
+	 * 
 	 * The capacity of each machine should not be exceeded
 	 * Eater should not receive order until cook completes it
 	 * Eater should not leave Ratsie's until order is received
 	 * Eater should not place more than one order
 	 * Cook should not work on order before it is placed
 	 */
+	// 1. customer places order
+	// 2. cook receives order
+	// 3. cooks completes order
+	// 4. customer receives order
+	// 5. customer leaves ratsie
+	// ensure this ordering for every customer
 
+	private static boolean checkOrdering(List<SimulationEvent> events) {
+		int numCustomers = events.get(0).simParams[0];
+		SimulationEvent curEvent;
+		HashSet<Integer> orderSet = new HashSet<Integer>();
+		int start = 0;
+		int validateIndex = 0;
+		int correctOrderings = 0;
+		Customer curCustomer;
+		// the correct ordering of the events
+		SimulationEvent.EventType[] validate = new SimulationEvent.EventType[] {
+				SimulationEvent.EventType.CustomerPlacedOrder,
+				SimulationEvent.EventType.CookReceivedOrder,
+				SimulationEvent.EventType.CookCompletedOrder,
+				SimulationEvent.EventType.CustomerReceivedOrder,
+				SimulationEvent.EventType.CustomerLeavingRatsies};
+		
 
+		for(int i = 1; i < events.size(); i++) {
+			curEvent = events.get(i);
+			// if you find an order placed event start searching for the next event
+			if(curEvent.event == SimulationEvent.EventType.CustomerPlacedOrder) {
+				start = i;
+				curCustomer = curEvent.customer;
+				// check for duplicate orders 
+				if(orderSet.contains(curEvent.orderNumber)) {
+					return false;
+				}
+				// loop through the  rest of the events looking for the next event that also has the correct order number
+				for(int j=start; j < events.size(); j++) {
+					SimulationEvent temp = events.get(j);
+					if(validateIndex != 5 && temp.event == validate[validateIndex]) {
+						// if the event is customer leaving you cant compare via order number because its not included in the event
+						// and you cant compare via the customers order number field because that shit is private so i use toString()
+						// to avoid that (you could just write a getter or make it public)
+						if(validateIndex == 4 && temp.customer.toString().equals(curCustomer.toString())) {
+							validateIndex++;
+						}
+						else if(temp.orderNumber == curEvent.orderNumber) {
+							validateIndex++;
+						}
+					}
+				}
+				// check that you found all 5 matching events in the correct order
+				if(validateIndex != 5) {
+					return false;
+				}
+				else {correctOrderings++;}
+			}
+
+		}
+		if(correctOrderings != numCustomers) {
+			return false;
+		}
+		return true;
+
+	}
 	/**
 	 * Validates the given list of events is a valid simulation.
 	 * Returns true if the simulation is valid, false otherwise.
@@ -67,6 +131,9 @@ public class Validate {
 		int curCustomers = 0;
 		int curCooks = 0;
 		int curCapacity = 0;
+
+
+
 		SimulationEvent curEvent;
 		for(int i = 1; i < events.size(); i++) {
 			curEvent = events.get(i);
@@ -110,9 +177,10 @@ public class Validate {
 					"Simulation didn't start with initiation event");
 			check(events.get(events.size() - 1).event == SimulationEvent.EventType.SimulationEnded,
 					"Simulation didn't end with termination event");
-			
+
 			// this is my method
 			check(checkParams(events), "you exceeded capacity in machines/cooks/customers/eaters");
+			check(checkOrdering(events),"some of your events were out of order");
 
 			return true;
 		} catch (InvalidSimulationException e) {
