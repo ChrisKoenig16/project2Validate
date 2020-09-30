@@ -93,6 +93,7 @@ public class Validate {
 					return false;
 				}
 				else {correctOrderings++;}
+				validateIndex = 0;
 			}
 
 		}
