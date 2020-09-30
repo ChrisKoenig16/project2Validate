@@ -73,6 +73,9 @@ public class Validate {
 				if(orderSet.contains(curEvent.orderNumber)) {
 					return false;
 				}
+				else {
+					orderSet.add(curEvent.orderNumber);
+				}
 				// loop through the  rest of the events looking for the next event that also has the correct order number
 				for(int j=start; j < events.size(); j++) {
 					SimulationEvent temp = events.get(j);
